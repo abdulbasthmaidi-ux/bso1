@@ -1,0 +1,7 @@
+{
+  "name": "مسار - منصة إدارة ومتابعة المشاريع الأكاديمية",
+  "description": "منصة إلكترونية متكاملة لإدارة ومتابعة مشاريع التخرج والأبحاث الأكاديمية بين الطلاب والمشرفين واللجان العلمية",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
