@@ -1,8 +1,12 @@
+
 <!doctype html>
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#115e59" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>مسار - منصة إدارة ومتابعة المشاريع الأكاديمية</title>
     <meta name="description" content="منصة إلكترونية متكاملة لإدارة ومتابعة مشاريع التخرج والأبحاث الأكاديمية بين الطلاب والمشرفين واللجان العلمية" />
     <meta property="og:title" content="مسار - منصة إدارة ومتابعة المشاريع الأكاديمية" />
@@ -12,10 +16,1171 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: 'Tajawal', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      .safe-bottom { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+      @media (min-width: 768px) {
+        .safe-bottom { padding-bottom: 2rem; }
+      }
+      @media print {
+        body { background: white !important; color: black !important; }
+        .no-print { display: none !important; }
+      }
+    </style>
   </head>
-  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-teal-500 selection:text-white">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-teal-700 selection:text-white min-h-screen flex flex-col safe-bottom">
+    <!-- شريط التنقل العلوي المتجاوب -->
+    <header class="no-print sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs">
+      <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+        <button onclick="app.navigate('dashboard')" class="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 hover:text-teal-700 transition-colors whitespace-nowrap">
+          مسار الأكاديمي
+        </button>
+
+        <nav class="hidden md:flex items-center gap-6 lg:gap-8 text-sm font-medium" id="main-nav"></nav>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="hidden md:flex items-center bg-slate-100 p-1 rounded-lg text-xs font-medium" id="role-switcher"></div>
+          <button onclick="app.openNewProjectModal()" class="active:scale-95 flex items-center gap-1 px-3 sm:px-3.5 py-2 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-lg transition-all shadow-sm whitespace-nowrap">
+            <span>+ مقترح جديد</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- شريط تبديل الدور المخصص للجوال -->
+      <div class="md:hidden border-t border-slate-100 bg-slate-50/90 px-3.5 py-1.5 flex items-center justify-between gap-2 text-xs">
+        <span class="text-slate-500 font-medium text-[11px] whitespace-nowrap">تصفح بصفة:</span>
+        <div class="flex items-center bg-slate-200/70 p-0.5 rounded-lg flex-1 max-w-[260px]" id="mobile-role-switcher"></div>
+      </div>
+    </header>
+
+    <!-- إشعار التنبيه اللحظي (مرفوع فوق شريط الجوال السفلي) -->
+    <div id="toast-container" class="no-print fixed bottom-20 md:bottom-5 left-4 right-4 md:right-auto md:left-5 z-50 hidden items-center justify-center md:justify-start gap-2 px-4 py-3 bg-slate-900/95 text-white text-xs font-medium rounded-xl shadow-xl border border-slate-700">
+      <span class="w-2 h-2 rounded-full bg-teal-400 shrink-0"></span>
+      <span id="toast-message" class="truncate"></span>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <main id="app-main" class="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6"></main>
+
+    <!-- شريط التنقل السفلي الثابت للجوال -->
+    <nav id="mobile-bottom-nav" class="no-print md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 grid grid-cols-4 h-16 px-1 shadow-lg" style="padding-bottom: env(safe-area-inset-bottom, 0px);"></nav>
+
+    <!-- النوافذ المنبثقة -->
+    <div id="modal-root"></div>
+
+    <!-- تذييل الصفحة -->
+    <footer class="no-print hidden md:block mt-auto border-t border-slate-200 bg-white py-6">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div>مسار الأكاديمي · منظومة إدارة ومتابعة مشاريع التخرج والأبحاث العلمية</div>
+        <div class="flex items-center gap-4 text-slate-400">
+          <span>وكالة الكلية للشؤون الأكاديمية</span>
+          <span>·</span>
+          <span>العام الجامعي 2026/2027</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      const FACULTY_MEMBERS = [
+        { id: 'sup-1', name: 'أ.د. ريم بنت عبدالعزيز الخالدي', title: 'أستاذ دكتور في الذكاء الاصطناعي وتعلم الآلة', department: 'قسم الذكاء الاصطناعي وعلم البيانات' },
+        { id: 'sup-2', name: 'د. حسام بن طارق الشريف', title: 'أستاذ مشارك - رئيس لجنة مشاريع التخرج', department: 'قسم هندسة البرمجيات وتكنولوجيا المعلومات' },
+        { id: 'sup-3', name: 'د. فيصل بن عبدالله المهيدب', title: 'أستاذ مساعد في الأمن السيبراني والشبكات', department: 'قسم الأمن السيبراني والتحري الجنائي الرقمي' },
+        { id: 'sup-4', name: 'د. سارة بنت منصور العتيبي', title: 'أستاذ مشارك في نظم المعلومات والحوسبة السحابية', department: 'قسم نظم المعلومات' }
+      ];
+
+      const DEPARTMENTS = [
+        'جميع الأقسام الأكاديمية',
+        'قسم الذكاء الاصطناعي وعلم البيانات',
+        'قسم هندسة البرمجيات وتكنولوجيا المعلومات',
+        'قسم الأمن السيبراني والتحري الجنائي الرقمي',
+        'قسم نظم المعلومات'
+      ];
+
+      const INITIAL_PROJECTS = [
+        {
+          id: 'prj-101',
+          code: 'CS-GP2-2026-01',
+          title: 'نظام الكشف المبكر والآلي عن آفات المحاصيل الزراعية بالرؤية الحاسوبية وإنترنت الأشياء (AgriVision AI)',
+          titleEn: 'AgriVision AI: Early Autonomous Crop Pest Detection using Computer Vision & Edge IoT',
+          department: 'قسم الذكاء الاصطناعي وعلم البيانات',
+          academicYear: '2026 / 2027',
+          term: 'الفصل الدراسي الثاني (مشروع تخرج 2)',
+          category: 'graduation_2',
+          abstract: 'يهدف المشروع إلى معالجة خسائر الإنتاج الزراعي من خلال تطوير منظومة متكاملة تجمع بين كاميرات المراقبة الحقلية ونماذج الرؤية الحاسوبية العميقة المعالجة طرفياً (Edge Computing)، مع لوحة تحكم سحابية ترسل تنبيهات استباقية للمزارعين.',
+          objectives: [
+            'تدريب نموذج Vision Transformer مخصص لتصنيف 14 نوعاً من آفات النخيل بدقة تفوق 96%.',
+            'بناء عقد استشعار طرفية منخفضة الطاقة متصلة بشبكات LoRaWAN لرصد الحرارة والرطوبة.',
+            'تطوير تطبيق ويب لإشعار المزارعين لحظياً بالبؤر المصابة مع خرائط حرارية دقيقة.'
+          ],
+          methodology: 'اعتمد الفريق منهجية Agile Scrum مع تقسيم المشروع إلى 5 سباقات رئيسية وتقييم النماذج على أجهزة Jetson Nano.',
+          status: 'ready_for_defense',
+          progressPercentage: 92,
+          supervisor: FACULTY_MEMBERS[0],
+          students: [
+            { id: 's1', name: 'عبدالله بن محمد السعيد', studentId: '441008921', role: 'قائد الفريق ومطور نماذج الرؤية الحاسوبية' },
+            { id: 's2', name: 'يزيد بن خالد الدوسري', studentId: '441009142', role: 'مهندس إنترنت الأشياء والبرمجيات المدمجة' },
+            { id: 's3', name: 'ريان بن صالح القحطاني', studentId: '441007883', role: 'مطور واجهات المستخدم واللوحة السحابية' }
+          ],
+          milestones: [
+            { id: 'ms-1', title: 'اعتماد مقترح المشروع والدراسات المرجعية', description: 'صياغة وثيقة المقترح الأكاديمي ومراجعة الأبحاث السابقة.', dueDate: '2026-10-15', weightPercentage: 20, status: 'completed', deliverableRequired: true },
+            { id: 'ms-2', title: 'تصميم البنية الهندسية وتجميع البيانات الحقلية', description: 'مخططات المعمارية ومجموعة البيانات الموسومة لأمراض النخيل.', dueDate: '2026-11-20', weightPercentage: 25, status: 'completed', deliverableRequired: true },
+            { id: 'ms-3', title: 'تطوير النواة البرمجية وتدريب نماذج الرؤية', description: 'تدريب النماذج وربط أجهزة إنترنت الأشياء عبر بروتوكول MQTT.', dueDate: '2026-12-25', weightPercentage: 30, status: 'completed', deliverableRequired: true },
+            { id: 'ms-4', title: 'الاختبارات الميدانية والمناقشة العلنية', description: 'تجربة المنظومة وتسليم المسودة النهائية والعرض أمام اللجنة.', dueDate: '2027-02-18', weightPercentage: 25, status: 'in_progress', deliverableRequired: true }
+          ],
+          deliverables: [
+            { id: 'del-1', milestoneId: 'ms-1', title: 'وثيقة مقترح المشروع المعتمدة (Proposal v1.2)', submittedBy: 'عبدالله بن محمد السعيد', submittedAt: '2026-10-14', version: '1.2', fileName: 'AgriVision_Proposal_v1.2.pdf', fileSize: '4.8 MB', plagiarismSimilarity: 4.2, status: 'approved', grade: 98, feedback: [{ authorName: 'أ.د. ريم الخالدي', text: 'مقترح ممتاز ومستوفٍ لكافة المعايير المنهجية.', date: '2026-10-15' }] },
+            { id: 'del-2', milestoneId: 'ms-3', title: 'المسودة النهائية لتقرير مشروع التخرج', submittedBy: 'عبدالله بن محمد السعيد', submittedAt: '2027-01-26', version: '2.0', fileName: 'AgriVision_Thesis_v2.pdf', fileSize: '18.7 MB', plagiarismSimilarity: 6.1, status: 'approved', grade: 96, feedback: [] }
+          ],
+          tasks: [
+            { id: 'tsk-1', title: 'إعداد منصة العرض الحي (Live Demo)', description: 'تجهيز الكاميرا الحقلية ومتحكم Jetson للتجربة المباشرة.', assignedTo: 'يزيد بن خالد الدوسري', status: 'in_progress', priority: 'high', dueDate: '2027-02-15' },
+            { id: 'tsk-2', title: 'تصميم الشرائح التقديمية وتدريب الفريق', description: 'إعداد 25 شريحة مكثفة توضح المشكلة والنتائج التجريبية.', assignedTo: 'عبدالله بن محمد السعيد', status: 'todo', priority: 'high', dueDate: '2027-02-14' },
+            { id: 'tsk-3', title: 'تحسين كود الاستدلال وتقليل زمن المعالجة', description: 'تطبيق TensorRT quantization على النموذج.', assignedTo: 'عبدالله بن محمد السعيد', status: 'done', priority: 'high', dueDate: '2027-01-20' }
+          ],
+          supervisoryMeetings: [
+            { id: 'meet-1', date: '2026-11-15', time: '11:00 ص', location: 'معمل أبحاث الذكاء الاصطناعي', agenda: 'مراجعة دقة التصنيف ومخطط استهلاك الطاقة', outcomes: 'أظهر النموذج دقة 94.2% وتم التوصية بزيادة عينات الإضاءة الليلية.', actionItems: ['إضافة 500 صورة ليلية', 'تحسين خوارزمية السكون'], nextMeetingDate: '2026-12-10', supervisorSignature: true, attendedStudents: ['عبدالله السعيد', 'يزيد الدوسري'] },
+            { id: 'meet-2', date: '2027-01-18', time: '01:00 م', location: 'قاعة الاجتماعات الذكية', agenda: 'المراجعة النهائية لتقرير التخرج وفحص الاستلال', outcomes: 'نسبة الاستلال 6.1% وهي ضمن الحد المسموح. تم التوقيع بالموافقة على دخول المناقشة.', actionItems: ['تجهيز ملصق المشروع البحثي (Poster)'], nextMeetingDate: '2027-02-12', supervisorSignature: true, attendedStudents: ['عبدالله السعيد', 'يزيد الدوسري', 'ريان القحطاني'] }
+          ],
+          defenseSchedule: {
+            date: '2027-02-18',
+            time: '10:00 صباحاً',
+            hall: 'مدرج كلية علوم الحاسب (قاعة ابن الهيثم)',
+            headOfCommittee: 'أ.د. ريم بنت عبدالعزيز الخالدي',
+            internalExaminer: 'د. حسام بن طارق الشريف',
+            externalExaminer: 'أ.د. ماجد بن سعود السبيعي',
+            verdict: 'pass_with_honors'
+          },
+          evaluations: [
+            { id: 'ev-1', evaluatorName: 'أ.د. ريم الخالدي', evaluatorRole: 'supervisor', scores: { problemSignificance: 15, literatureMethodology: 19, technicalImplementation: 34, documentationReport: 14, presentationDefense: 14 }, totalScore: 96, feedback: 'أداء استثنائي والتزام دقيق بالجدول الزمني.', submittedAt: '2027-01-29' }
+          ],
+          tags: ['ذكاء اصطناعي', 'رؤية حاسوبية', 'إنترنت الأشياء', 'زراعة دقيقة']
+        },
+        {
+          id: 'prj-102',
+          code: 'SWE-GP2-2026-04',
+          title: 'منصة لا مركزية لإدارة ومصادقة السجلات الأكاديمية والشهادات الجامعية بسلاسل الكتل (UniTrust Ledger)',
+          titleEn: 'UniTrust Ledger: Decentralized Academic Credential Verification via Permissioned Blockchain',
+          department: 'قسم هندسة البرمجيات وتكنولوجيا المعلومات',
+          academicYear: '2026 / 2027',
+          term: 'الفصل الدراسي الثاني (مشروع تخرج 2)',
+          category: 'graduation_2',
+          abstract: 'تطوير بنية برمجية موثوقة لمنع تزوير الشهادات والوثائق الأكاديمية والتحقق الفوري منها عالمياً باستخدام شبكة Hyperledger Fabric المصرح بها.',
+          objectives: [
+            'تصميم وتنفيذ عقود ذكية متوافقة مع متطلبات الخصوصية.',
+            'توفير بوابة سحابية للتحقق من مصداقية وثائق الخريجين في أقل من 3 ثوانٍ.'
+          ],
+          methodology: 'منهجية الخدمات المصغرة (Microservices) مع اختبارات أمان وضغط لشبكة الكتل.',
+          status: 'in_progress',
+          progressPercentage: 78,
+          supervisor: FACULTY_MEMBERS[1],
+          students: [
+            { id: 's4', name: 'عمر بن خالد الناصر', studentId: '441006543', role: 'مطور العقود الذكية' },
+            { id: 's5', name: 'فهد بن سلمان المطيري', studentId: '441008776', role: 'مطور الواجهات الخلفية' }
+          ],
+          milestones: [
+            { id: 'ms-201', title: 'المتطلبات ومعمارية النظام', description: 'دراسة اللوائح الأكاديمية وتحليل متطلبات الأمان.', dueDate: '2026-10-18', weightPercentage: 30, status: 'completed', deliverableRequired: true },
+            { id: 'ms-202', title: 'نشر شبكة الكتل وتطوير العقود الذكية', description: 'بناء 4 عقد جامعية موزعة وكتابة عقود الاعتماد.', dueDate: '2026-12-05', weightPercentage: 40, status: 'completed', deliverableRequired: true },
+            { id: 'ms-203', title: 'بوابة التحقق والمناقشة النهائية', description: 'تطوير تطبيق التحقق وفحص الثغرات.', dueDate: '2027-02-24', weightPercentage: 30, status: 'in_progress', deliverableRequired: true }
+          ],
+          deliverables: [
+            { id: 'del-201', milestoneId: 'ms-201', title: 'وثيقة المتطلبات والمواصفات المعمارية (SRS)', submittedBy: 'عمر بن خالد الناصر', submittedAt: '2026-10-17', version: '1.1', fileName: 'UniTrust_SRS.pdf', fileSize: '6.2 MB', plagiarismSimilarity: 5.1, status: 'approved', grade: 93, feedback: [] }
+          ],
+          tasks: [
+            { id: 'tsk-201', title: 'تطوير مكون مسح رمز QR للتحقق الفوري', description: 'دعم التحقق بالتوقيعات الرقمية.', assignedTo: 'فهد بن سلمان المطيري', status: 'in_progress', priority: 'high', dueDate: '2027-02-10' }
+          ],
+          supervisoryMeetings: [
+            { id: 'meet-201', date: '2026-11-20', time: '12:00 م', location: 'مكتب رئيس القسم', agenda: 'مراجعة سرعة إتمام المعاملات على الشبكة', outcomes: 'تم تحقيق معدل 450 معاملة في الثانية.', actionItems: ['توثيق نتائج قياس الأداء في الفصل الرابع'], nextMeetingDate: '2027-01-10', supervisorSignature: true, attendedStudents: ['عمر الناصر', 'فهد المطيري'] }
+          ],
+          evaluations: [],
+          tags: ['سلاسل الكتل', 'أمن المعلومات', 'هندسة البرمجيات']
+        },
+        {
+          id: 'prj-103',
+          code: 'CYB-GP1-2026-08',
+          title: 'محرك استخباراتي للكشف عن التهديدات المتقدمة المستمرة (APT) في شبكات البنية التحتية الحيوية',
+          titleEn: 'CyberSentinel: Intelligence Engine for APT Detection in Critical Infrastructure Networks',
+          department: 'قسم الأمن السيبراني والتحري الجنائي الرقمي',
+          academicYear: '2026 / 2027',
+          term: 'الفصل الدراسي الأول (مشروع تخرج 1)',
+          category: 'graduation_1',
+          abstract: 'مشروع بحثي وتطبيقي يركز على رصد الهجمات الصامتة في شبكات التحكم الصناعي (SCADA/ICS) باستخدام التعلم غير الخاضع للإشراف.',
+          objectives: ['تحليل بروتوكولات Modbus الصناعية', 'كشف أنماط التسلل الجانبي قبل التخريب'],
+          methodology: 'استخدام بيئة محاكاة شبكية مغلقة (Testbed) مع ضخ سيناريوهات هجمات واقعية.',
+          status: 'proposal_approved',
+          progressPercentage: 50,
+          supervisor: FACULTY_MEMBERS[2],
+          students: [
+            { id: 's6', name: 'سعود بن عبدالعزيز التميمي', studentId: '442001122', role: 'محلل حركة الشبكات الصناعية' },
+            { id: 's7', name: 'ماجد بن إبراهيم الحازمي', studentId: '442003344', role: 'مطور نماذج الكشف الشاذ' }
+          ],
+          milestones: [
+            { id: 'ms-301', title: 'المسح الأدبي وبناء معمل المحاكاة', description: 'إعداد المحاكيات لأنظمة SCADA.', dueDate: '2026-11-10', weightPercentage: 50, status: 'completed', deliverableRequired: true },
+            { id: 'ms-302', title: 'تدريب مصنف الكشف الشاذ والتقرير الأولي', description: 'بناء نموذج Autoencoder للكشف اللحظي.', dueDate: '2027-02-20', weightPercentage: 50, status: 'in_progress', deliverableRequired: true }
+          ],
+          deliverables: [],
+          tasks: [],
+          supervisoryMeetings: [],
+          evaluations: [],
+          tags: ['أمن سيبراني', 'تحكم صناعي', 'SCADA']
+        }
+      ];
+
+      const STORAGE_KEY = 'masar_singlefile_projects_v1';
+
+      const app = {
+        projects: [],
+        currentRole: 'supervisor',
+        currentView: 'dashboard',
+        activeProjectId: null,
+        activeTab: 'milestones',
+        searchQuery: '',
+        selectedDepartment: 'جميع الأقسام الأكاديمية',
+        selectedStatus: 'all',
+
+        init() {
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            this.projects = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(INITIAL_PROJECTS));
+          } catch (e) {
+            this.projects = JSON.parse(JSON.stringify(INITIAL_PROJECTS));
+          }
+          this.renderAll();
+        },
+
+        save() {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.projects));
+          } catch (e) {}
+        },
+
+        notify(msg) {
+          const toast = document.getElementById('toast-container');
+          const text = document.getElementById('toast-message');
+          if (!toast || !text) return;
+          text.textContent = msg;
+          toast.classList.remove('hidden');
+          toast.classList.add('flex');
+          clearTimeout(this._toastTimer);
+          this._toastTimer = setTimeout(() => {
+            toast.classList.add('hidden');
+            toast.classList.remove('flex');
+          }, 3500);
+        },
+
+        setRole(role) {
+          this.currentRole = role;
+          const labels = {
+            student: 'طالب باحث (عبدالله السعيد)',
+            supervisor: 'أستاذ مشرف (أ.د. ريم الخالدي)',
+            committee: 'رئيس لجنة المشاريع (د. حسام الشريف)'
+          };
+          this.notify('تم التبديل إلى منظور: ' + labels[role]);
+          this.renderAll();
+        },
+
+        navigate(view, projectId = null) {
+          this.currentView = view;
+          if (projectId) {
+            this.activeProjectId = projectId;
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          this.renderAll();
+        },
+
+        getActiveProject() {
+          return this.projects.find(p => p.id === this.activeProjectId) || this.projects[0];
+        },
+
+        statusLabel(status) {
+          const map = {
+            proposal_submitted: 'مقترح قيد المراجعة',
+            proposal_approved: 'تم اعتماد المقترح',
+            in_progress: 'قيد التنفيذ والتقييم',
+            ready_for_defense: 'جاهز للمناقشة العلنية',
+            defended_passed: 'تمت المناقشة بنجاح'
+          };
+          return map[status] || status;
+        },
+
+        renderHeader() {
+          const navItems = [
+            { id: 'dashboard', label: 'الرئيسية', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>' },
+            { id: 'projects', label: 'المشاريع', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>' },
+            { id: 'defense_schedule', label: 'المناقشات', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>' },
+            { id: 'reports', label: 'التقارير', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' }
+          ];
+          document.getElementById('main-nav').innerHTML = navItems.map(item => `
+            <button onclick="app.navigate('${item.id}')" class="py-1 transition-colors whitespace-nowrap text-sm ${
+              this.currentView === item.id || (this.currentView === 'project_detail' && item.id === 'projects')
+                ? 'text-teal-700 font-bold border-b-2 border-teal-700'
+                : 'text-slate-600 hover:text-slate-900'
+            }">${item.label}</button>
+          `).join('');
+
+          const mobileNav = document.getElementById('mobile-bottom-nav');
+          if (mobileNav) {
+            mobileNav.innerHTML = navItems.map(item => {
+              const isActive = this.currentView === item.id || (this.currentView === 'project_detail' && item.id === 'projects');
+              return `
+                <button onclick="app.navigate('${item.id}')" class="flex flex-col items-center justify-center gap-1 text-[11px] font-bold transition-colors ${
+                  isActive ? 'text-teal-800' : 'text-slate-400 hover:text-slate-700'
+                }">
+                  ${item.icon}
+                  <span>${item.label}</span>
+                </button>
+              `;
+            }).join('');
+          }
+
+          const roles = [
+            { id: 'student', label: 'طالب' },
+            { id: 'supervisor', label: 'مشرف' },
+            { id: 'committee', label: 'لجنة الحكم' }
+          ];
+          document.getElementById('role-switcher').innerHTML = roles.map(r => `
+            <button onclick="app.setRole('${r.id}')" class="px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
+              this.currentRole === r.id ? 'bg-white text-teal-800 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900'
+            }">${r.label}</button>
+          `).join('');
+
+          const mobileRoles = document.getElementById('mobile-role-switcher');
+          if (mobileRoles) {
+            mobileRoles.innerHTML = roles.map(r => `
+              <button onclick="app.setRole('${r.id}')" class="flex-1 py-1 rounded-md text-[11px] text-center transition-all whitespace-nowrap ${
+                this.currentRole === r.id ? 'bg-white text-teal-800 shadow-sm font-bold' : 'text-slate-600'
+              }">${r.label}</button>
+            `).join('');
+          }
+        },
+
+        renderAll() {
+          this.renderHeader();
+          const main = document.getElementById('app-main');
+          if (this.currentView === 'dashboard') main.innerHTML = this.renderDashboard();
+          else if (this.currentView === 'projects') main.innerHTML = this.renderProjectsList();
+          else if (this.currentView === 'project_detail') main.innerHTML = this.renderProjectDetail();
+          else if (this.currentView === 'defense_schedule') main.innerHTML = this.renderDefenseSchedule();
+          else if (this.currentView === 'reports') main.innerHTML = this.renderReports();
+        },
+
+        renderDashboard() {
+          const totalProjects = this.projects.length;
+          const avgProgress = Math.round(this.projects.reduce((s, p) => s + p.progressPercentage, 0) / (totalProjects || 1));
+          const totalMeetings = this.projects.reduce((s, p) => s + p.supervisoryMeetings.length, 0);
+          const totalDeliverables = this.projects.reduce((s, p) => s + p.deliverables.length, 0);
+
+          return `
+            <div class="space-y-8">
+              <!-- البانر الترحيبي -->
+              <section class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-900 text-white shadow-sm px-6 py-10 sm:px-10">
+                <div class="max-w-3xl space-y-4">
+                  <div class="text-xs font-semibold tracking-wider text-teal-400">
+                    منظومة المتابعة والتحكيم الأكاديمي الموحدة · الفصل الجامعي 2026/2027
+                  </div>
+                  <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white">
+                    إدارة متكاملة لمسار مشاريع التخرج والأبحاث العلمية
+                  </h1>
+                  <p class="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
+                    منصة تيسر التواصل الأكاديمي بين الطلاب والأساتذة المشرفين ولجان التحكيم العلمي؛ بدءاً من إيداع المقترحات البحثية وحتى جلسات الدفاع والتقييم النهائي.
+                  </p>
+                  <div class="flex flex-wrap items-center gap-3 pt-2">
+                    <button onclick="app.navigate('projects')" class="px-4 py-2 text-xs font-bold text-slate-900 bg-white rounded-lg hover:bg-slate-100 transition-colors">
+                      استعراض كافة المشاريع
+                    </button>
+                    <button onclick="app.openNewProjectModal()" class="px-4 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-600 rounded-lg transition-colors border border-teal-600">
+                      تقديم مقترح مشروع جديد
+                    </button>
+                    <button onclick="app.navigate('defense_schedule')" class="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition-colors">
+                      جدول لجان المناقشة ←
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <!-- بطاقات الإحصائيات -->
+              <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                  <div class="text-xs text-slate-500 font-medium mb-1">المشاريع النشطة</div>
+                  <div class="text-2xl font-bold text-slate-900">${totalProjects}</div>
+                  <div class="text-xs text-slate-500 mt-2">موزعة على الأقسام الأكاديمية</div>
+                </div>
+                <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                  <div class="text-xs text-slate-500 font-medium mb-1">متوسط نسبة الإنجاز العام</div>
+                  <div class="text-2xl font-bold text-teal-800">${avgProgress}%</div>
+                  <div class="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
+                    <div class="bg-teal-600 h-1.5 rounded-full" style="width: ${avgProgress}%"></div>
+                  </div>
+                </div>
+                <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                  <div class="text-xs text-slate-500 font-medium mb-1">التقارير والمخرجات المسلمة</div>
+                  <div class="text-2xl font-bold text-amber-700">${totalDeliverables}</div>
+                  <div class="text-xs text-slate-500 mt-2">مفحوصة ضد الاستلال العلمي</div>
+                </div>
+                <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm">
+                  <div class="text-xs text-slate-500 font-medium mb-1">جلسات الإرشاد الموثقة</div>
+                  <div class="text-2xl font-bold text-slate-900">${totalMeetings}</div>
+                  <div class="text-xs text-slate-500 mt-2">بمحاضر موقعة رقمياً</div>
+                </div>
+              </section>
+
+              <!-- قائمة المشاريع السريعة وجدول المناقشات -->
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <section class="lg:col-span-2 space-y-4">
+                  <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <h2 class="text-lg font-bold text-slate-900">المشاريع الأكاديمية تحت الإشراف</h2>
+                    <button onclick="app.navigate('projects')" class="text-xs font-bold text-teal-800 hover:underline">عرض الدليل كاملاً ←</button>
+                  </div>
+                  <div class="divide-y divide-slate-200 border border-slate-200 rounded-lg bg-white overflow-hidden shadow-sm">
+                    ${this.projects.map(p => `
+                      <div onclick="app.navigate('project_detail', '${p.id}')" class="p-5 hover:bg-slate-50 transition-colors cursor-pointer group">
+                        <div class="flex items-start justify-between gap-4 mb-2">
+                          <div>
+                            <div class="text-xs text-slate-500 mb-1 flex items-center gap-2">
+                              <span class="font-mono font-bold text-teal-800">${p.code}</span>
+                              <span>·</span>
+                              <span>${p.department}</span>
+                            </div>
+                            <h3 class="text-base font-bold text-slate-900 group-hover:text-teal-800 transition-colors">${p.title}</h3>
+                          </div>
+                          <div class="text-left shrink-0">
+                            <div class="text-base font-bold text-slate-900">${p.progressPercentage}%</div>
+                            <div class="text-xs text-slate-400">إنجاز</div>
+                          </div>
+                        </div>
+                        <p class="text-xs text-slate-600 line-clamp-2 mb-3">${p.abstract}</p>
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
+                          <span>المشرف: <strong class="text-slate-700">${p.supervisor.name}</strong> · ${p.students.length} طلاب</span>
+                          <span class="text-teal-800 font-bold">${this.statusLabel(p.status)} ←</span>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </section>
+
+                <section class="space-y-4">
+                  <div class="border border-slate-200 rounded-lg bg-white p-5 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 class="text-sm font-bold text-slate-900">جلسات المناقشة المجدولة</h3>
+                      <button onclick="app.navigate('defense_schedule')" class="text-xs text-teal-800 hover:underline">الجدول</button>
+                    </div>
+                    <div class="space-y-3">
+                      ${this.projects.filter(p => p.defenseSchedule).map(p => `
+                        <div onclick="app.navigate('project_detail', '${p.id}')" class="p-3 bg-slate-50 rounded-md hover:bg-teal-50/50 cursor-pointer border border-slate-200/70 text-xs space-y-1">
+                          <div class="text-teal-800 font-bold flex justify-between">
+                            <span>${p.defenseSchedule.date}</span>
+                            <span>${p.defenseSchedule.time}</span>
+                          </div>
+                          <div class="font-bold text-slate-900 line-clamp-1">${p.title}</div>
+                          <div class="text-slate-500">${p.defenseSchedule.hall}</div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <div class="border border-slate-200 rounded-lg bg-slate-50 p-4 text-xs text-slate-600 space-y-1.5">
+                    <div class="font-bold text-slate-900">ضوابط التسليم والاعتماد الأكاديمي</div>
+                    <p class="leading-relaxed">يشترط ألا تتجاوز نسبة الاستلال العلمي 15% في المسودة النهائية للمشروع كشرط أساسي لدخول جلسة المناقشة العلنية.</p>
+                  </div>
+                </section>
+              </div>
+            </div>
+          `;
+        },
+
+        renderProjectsList() {
+          const q = this.searchQuery.toLowerCase().trim();
+          const filtered = this.projects.filter(p => {
+            const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.code.toLowerCase().includes(q) || p.supervisor.name.toLowerCase().includes(q);
+            const matchesDept = this.selectedDepartment === 'جميع الأقسام الأكاديمية' || p.department === this.selectedDepartment;
+            const matchesStatus = this.selectedStatus === 'all' || p.status === this.selectedStatus;
+            return matchesSearch && matchesDept && matchesStatus;
+          });
+
+          return `
+            <div class="space-y-6">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+                <div>
+                  <h1 class="text-xl sm:text-2xl font-bold text-slate-900">دليل المشاريع والأبحاث الأكاديمية</h1>
+                  <div class="text-xs text-slate-500 mt-1">إدارة وتتبع مسارات مشاريع التخرج ورسائل الدراسات العليا المعتمدة</div>
+                </div>
+                <button onclick="app.openNewProjectModal()" class="px-4 py-2 text-xs font-bold text-white bg-teal-800 hover:bg-teal-900 rounded-lg">
+                  + تسجيل مقترح مشروع
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input
+                  type="text"
+                  value="${this.searchQuery}"
+                  oninput="app.searchQuery = this.value; app.renderAll();"
+                  placeholder="البحث بالرمز، العنوان، أو اسم المشرف..."
+                  class="md:col-span-2 px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-teal-700"
+                />
+                <select
+                  onchange="app.selectedDepartment = this.value; app.renderAll();"
+                  class="px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-teal-700"
+                >
+                  ${DEPARTMENTS.map(d => `<option value="${d}" ${this.selectedDepartment === d ? 'selected' : ''}>${d}</option>`).join('')}
+                </select>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                ${filtered.map(p => `
+                  <div onclick="app.navigate('project_detail', '${p.id}')" class="bg-white border border-slate-200 rounded-lg p-5 hover:border-teal-700 transition-all cursor-pointer group shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div class="text-xs text-slate-500 mb-2 flex items-center gap-2">
+                        <span class="font-mono font-bold text-teal-800">${p.code}</span>
+                        <span>·</span>
+                        <span>${p.department}</span>
+                      </div>
+                      <h3 class="text-base font-bold text-slate-900 group-hover:text-teal-800 mb-2">${p.title}</h3>
+                      <p class="text-xs text-slate-600 line-clamp-2 mb-4">${p.abstract}</p>
+                      <div class="space-y-1 mb-4">
+                        <div class="flex justify-between text-xs text-slate-500">
+                          <span>نسبة إنجاز المعالم</span>
+                          <span class="font-mono font-bold text-slate-800">${p.progressPercentage}%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div class="bg-teal-700 h-1.5 rounded-full" style="width: ${p.progressPercentage}%"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="pt-3 border-t border-slate-100 text-xs flex justify-between text-slate-500">
+                      <span>المشرف: <strong class="text-slate-800">${p.supervisor.name}</strong></span>
+                      <span class="text-teal-800 font-bold group-hover:underline">فتح الملف ←</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        },
+
+        renderProjectDetail() {
+          const p = this.getActiveProject();
+          if (!p) return '';
+          const tabs = [
+            { id: 'milestones', label: `خارطة المراحل والتسليمات (${p.milestones.length})` },
+            { id: 'tasks', label: `لوحة المهام (${p.tasks.length})` },
+            { id: 'meetings', label: `سجل الجلسات الإرشادية (${p.supervisoryMeetings.length})` },
+            { id: 'evaluation', label: `مصفوفة التقييم والدرجات (${p.evaluations.length})` },
+            { id: 'overview', label: 'المستخلص والأهداف' }
+          ];
+
+          return `
+            <div class="space-y-6">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <button onclick="app.navigate('projects')" class="text-xs font-bold text-slate-600 hover:text-slate-900">
+                  → الرجوع إلى دليل المشاريع
+                </button>
+                <button onclick="app.openOfficialReportModal('${p.id}')" class="px-3.5 py-1.5 text-xs font-bold bg-white border border-slate-200 hover:border-teal-700 text-teal-800 rounded-md shadow-sm">
+                  طباعة الوثيقة الأكاديمية الرسمية
+                </button>
+              </div>
+
+              <!-- ترويسة المشروع -->
+              <section class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-5">
+                <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                  <div class="space-y-2 max-w-4xl">
+                    <div class="text-xs text-slate-500 flex flex-wrap items-center gap-2">
+                      <span class="font-mono font-bold text-teal-800 text-sm">${p.code}</span>
+                      <span>·</span>
+                      <span class="font-medium text-slate-700">${p.department}</span>
+                      <span>·</span>
+                      <span>${p.term}</span>
+                    </div>
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 leading-snug">${p.title}</h1>
+                    <p class="text-xs text-slate-500 font-sans">${p.titleEn || ''}</p>
+                  </div>
+                  <div class="bg-slate-50 border border-slate-200 p-4 rounded-lg shrink-0 min-w-[170px] text-left">
+                    <div class="text-xs text-slate-500 mb-1">معدل الإنجاز التراكمي</div>
+                    <div class="text-3xl font-bold font-mono text-slate-900 mb-2">${p.progressPercentage}%</div>
+                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                      <div class="bg-teal-700 h-2 rounded-full" style="width: ${p.progressPercentage}%"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100 text-xs">
+                  <div class="p-3 bg-slate-50 rounded-lg border border-slate-200/70">
+                    <div class="text-slate-400 mb-0.5">المشرف الأكاديمي الرئيسي:</div>
+                    <div class="font-bold text-slate-900 text-sm">${p.supervisor.name}</div>
+                    <div class="text-slate-500">${p.supervisor.title}</div>
+                  </div>
+                  <div class="p-3 bg-slate-50 rounded-lg border border-slate-200/70">
+                    <div class="text-slate-400 mb-1">فريق البحث والطلاب (${p.students.length}):</div>
+                    <div class="flex flex-wrap gap-2">
+                      ${p.students.map(s => `<span class="font-bold text-slate-900 bg-white px-2 py-1 rounded border border-slate-200">${s.name} (${s.studentId})</span>`).join('')}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- شريط التبويبات المتوافق مع اللمس والجوال -->
+              <div class="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 overflow-x-auto hide-scrollbar text-xs font-bold -mx-4 px-4 sm:mx-0 sm:px-0">
+                ${tabs.map(t => `
+                  <button onclick="app.activeTab = '${t.id}'; app.renderAll();" class="py-3 px-3.5 whitespace-nowrap border-b-2 transition-colors shrink-0 ${
+                    this.activeTab === t.id ? 'border-teal-800 text-teal-900 bg-teal-50/50 sm:bg-transparent rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }">${t.label}</button>
+                `).join('')}
+              </div>
+
+              <!-- محتوى التبويب النشط -->
+              <div>
+                ${this.activeTab === 'milestones' ? this.renderMilestonesTab(p) : ''}
+                ${this.activeTab === 'tasks' ? this.renderKanbanTab(p) : ''}
+                ${this.activeTab === 'meetings' ? this.renderMeetingsTab(p) : ''}
+                ${this.activeTab === 'evaluation' ? this.renderEvaluationTab(p) : ''}
+                ${this.activeTab === 'overview' ? `
+                  <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm space-y-5 text-xs leading-relaxed">
+                    <div>
+                      <h3 class="text-sm font-bold text-slate-900 mb-2">المستخلص الأكاديمي (Abstract):</h3>
+                      <p class="text-slate-600 text-sm leading-relaxed">${p.abstract}</p>
+                    </div>
+                    <div>
+                      <h3 class="text-sm font-bold text-slate-900 mb-2">الأهداف الرئيسية للمشروع:</h3>
+                      <ul class="space-y-1.5">
+                        ${p.objectives.map((o, idx) => `<li class="text-slate-700"><strong class="text-teal-800">${idx + 1}.</strong> ${o}</li>`).join('')}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 class="text-sm font-bold text-slate-900 mb-2">المنهجية العلمية المتبعة:</h3>
+                      <p class="text-slate-600">${p.methodology}</p>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        },
+
+        renderMilestonesTab(p) {
+          return `
+            <div class="space-y-4">
+              ${p.milestones.map((ms, idx) => {
+                const delivs = p.deliverables.filter(d => d.milestoneId === ms.id);
+                return `
+                  <div class="p-4 rounded-lg border bg-white border-slate-200 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div class="text-xs text-slate-500 mb-1">
+                          <span class="font-bold text-slate-700">المرحلة ${idx + 1}</span> ·
+                          <span class="font-mono text-teal-800 font-bold">الوزن: ${ms.weightPercentage}%</span> ·
+                          <span>الاستحقاق: ${ms.dueDate}</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-slate-900">${ms.title}</h3>
+                        <p class="text-xs text-slate-600 mt-0.5">${ms.description}</p>
+                      </div>
+                      <div class="flex items-center gap-2 shrink-0">
+                        <span class="text-xs font-bold ${ms.status === 'completed' ? 'text-teal-700' : 'text-amber-700'}">
+                          ${ms.status === 'completed' ? 'مكتملة ومعتمدة ✓' : 'قيد التنفيذ'}
+                        </span>
+                        <button onclick="app.submitDeliverablePrompt('${p.id}', '${ms.id}', '${ms.title}')" class="px-3 py-1.5 text-xs font-bold bg-slate-100 hover:bg-teal-800 hover:text-white rounded-md transition-colors">
+                          + إيداع مخرج
+                        </button>
+                      </div>
+                    </div>
+                    ${delivs.length > 0 ? `
+                      <div class="pt-3 border-t border-slate-100 space-y-2">
+                        ${delivs.map(d => `
+                          <div class="p-3 bg-slate-50 rounded border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                            <div>
+                              <div class="font-bold text-slate-900">${d.title} <span class="font-mono text-slate-400">(v${d.version})</span></div>
+                              <div class="text-slate-500 mt-0.5">الملف: ${d.fileName} · الاستلال العلمي: <strong>${d.plagiarismSimilarity}%</strong> · قدمه: ${d.submittedBy}</div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                              ${d.grade ? `<span class="font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">الدرجة: ${d.grade}/100</span>` : ''}
+                              <span class="font-bold ${d.status === 'approved' ? 'text-teal-700' : 'text-amber-700'}">${d.status === 'approved' ? 'معتمد رسمي' : 'قيد المراجعة'}</span>
+                              ${(this.currentRole === 'supervisor' || this.currentRole === 'committee') && d.status !== 'approved' ? `
+                                <button onclick="app.approveDeliverable('${p.id}', '${d.id}')" class="px-2.5 py-1 bg-teal-800 text-white rounded font-bold">اعتماد ورصد 95</button>
+                              ` : ''}
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        },
+
+        renderKanbanTab(p) {
+          const cols = [
+            { id: 'todo', label: 'مهام قادمة' },
+            { id: 'in_progress', label: 'قيد التنفيذ' },
+            { id: 'done', label: 'مكتملة' }
+          ];
+          return `
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold text-slate-900">لوحة المهام وتوزيع الأدوار البحثية</h3>
+                <button onclick="app.addTaskPrompt('${p.id}')" class="px-3.5 py-1.5 text-xs font-bold text-white bg-teal-800 rounded-md">+ إضافة مهمة</button>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                ${cols.map(col => {
+                  const list = p.tasks.filter(t => t.status === col.id);
+                  return `
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3 min-h-[260px]">
+                      <div class="flex justify-between items-center border-b border-slate-200 pb-2 text-xs font-bold text-slate-800">
+                        <span>${col.label}</span>
+                        <span class="bg-white px-2 py-0.5 rounded border">${list.length}</span>
+                      </div>
+                      <div class="space-y-2.5">
+                        ${list.map(t => `
+                          <div class="bg-white border border-slate-200 rounded p-3 text-xs space-y-2 shadow-sm">
+                            <div class="flex justify-between text-slate-400">
+                              <span>${t.priority === 'high' ? 'أولوية عاجلة' : 'أولوية متوسطة'}</span>
+                              <span class="font-mono">${t.dueDate}</span>
+                            </div>
+                            <div class="font-bold text-slate-900">${t.title}</div>
+                            <div class="text-slate-600">${t.description || ''}</div>
+                            <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-slate-500">
+                              <span>المسؤول: ${t.assignedTo}</span>
+                              ${col.id !== 'done' ? `<button onclick="app.advanceTask('${p.id}', '${t.id}')" class="text-teal-800 font-bold hover:underline">نقل للتالي ←</button>` : '<span class="text-teal-700 font-bold">✓ منجزة</span>'}
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        },
+
+        renderMeetingsTab(p) {
+          return `
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold text-slate-900">سجل الجلسات الإرشادية والتوجيه الأكاديمي</h3>
+                <button onclick="app.addMeetingPrompt('${p.id}')" class="px-3.5 py-1.5 text-xs font-bold text-white bg-teal-800 rounded-md">+ توثيق جلسة إرشاد</button>
+              </div>
+              <div class="space-y-3">
+                ${p.supervisoryMeetings.length === 0 ? `<div class="p-8 text-center bg-white border rounded-lg text-xs text-slate-400">لم يتم تسجيل جلسات بعد</div>` : p.supervisoryMeetings.map((m, idx) => `
+                  <div class="bg-white border border-slate-200 rounded-lg p-5 space-y-3 text-xs shadow-sm">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <div class="font-bold text-slate-900">الجلسة (${p.supervisoryMeetings.length - idx}) · ${m.date} · ${m.time} · ${m.location}</div>
+                      <span class="text-teal-800 font-bold bg-teal-50 px-2.5 py-0.5 rounded border border-teal-200">✓ توقيع المشرف معتمد رقمياً</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div class="bg-slate-50 p-3 rounded border border-slate-100"><strong>جدول الأعمال:</strong> ${m.agenda}</div>
+                      <div class="bg-slate-50 p-3 rounded border border-slate-100"><strong>المخرجات والتوجيهات:</strong> ${m.outcomes}</div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        },
+
+        renderEvaluationTab(p) {
+          return `
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg p-5 space-y-4 text-xs shadow-sm">
+                <h3 class="text-sm font-bold text-slate-900 border-b pb-2">مصفوفة التقييم الأكاديمي الموزون (Rubric 100%)</h3>
+                <div class="space-y-3">
+                  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-slate-50 rounded-lg border">
+                    <span class="font-medium text-slate-800">1. أصالة المشكلة والأهمية التطبيقية (من 15)</span>
+                    <input id="ev-c1" type="number" min="0" max="15" value="14" class="w-full sm:w-20 px-3 py-1.5 border rounded-md font-mono font-bold text-center bg-white text-sm" />
+                  </div>
+                  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-slate-50 rounded-lg border">
+                    <span class="font-medium text-slate-800">2. المسح الأدبي والمنهجية العلمية (من 20)</span>
+                    <input id="ev-c2" type="number" min="0" max="20" value="19" class="w-full sm:w-20 px-3 py-1.5 border rounded-md font-mono font-bold text-center bg-white text-sm" />
+                  </div>
+                  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-slate-50 rounded-lg border">
+                    <span class="font-medium text-slate-800">3. التنفيذ البرمجي والهندسي والنتائج التجريبية (من 35)</span>
+                    <input id="ev-c3" type="number" min="0" max="35" value="34" class="w-full sm:w-20 px-3 py-1.5 border rounded-md font-mono font-bold text-center bg-white text-sm" />
+                  </div>
+                  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-slate-50 rounded-lg border">
+                    <span class="font-medium text-slate-800">4. التقرير الأكاديمي والتوثيق واللغة (من 15)</span>
+                    <input id="ev-c4" type="number" min="0" max="15" value="14" class="w-full sm:w-20 px-3 py-1.5 border rounded-md font-mono font-bold text-center bg-white text-sm" />
+                  </div>
+                  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-slate-50 rounded-lg border">
+                    <span class="font-medium text-slate-800">5. العرض التقديمي والمناقشة الشفهية (من 15)</span>
+                    <input id="ev-c5" type="number" min="0" max="15" value="15" class="w-full sm:w-20 px-3 py-1.5 border rounded-md font-mono font-bold text-center bg-white text-sm" />
+                  </div>
+                  <div>
+                    <label class="block font-bold mb-1">ملاحظات لجنة التحكيم:</label>
+                    <textarea id="ev-notes" rows="2" class="w-full p-2.5 border rounded-lg text-sm">مشروع متميز ومكتمل الأركان العلمية والتطبيقية.</textarea>
+                  </div>
+                  <button onclick="app.saveEvaluation('${p.id}')" class="w-full sm:w-auto px-5 py-2.5 bg-teal-800 text-white font-bold rounded-lg hover:bg-teal-900">
+                    اعتماد ورصد استمارة التقييم الأكاديمي
+                  </button>
+                </div>
+              </div>
+
+              <div class="bg-white border border-slate-200 rounded-lg p-5 space-y-3 text-xs shadow-sm">
+                <h3 class="text-sm font-bold text-slate-900 border-b pb-2">التقييمات المرصودة (${p.evaluations.length})</h3>
+                ${p.evaluations.map(ev => `
+                  <div class="p-3 bg-slate-50 rounded border space-y-1">
+                    <div class="flex justify-between font-bold">
+                      <span>${ev.evaluatorName}</span>
+                      <span class="text-teal-800 font-mono">${ev.totalScore} / 100</span>
+                    </div>
+                    <p class="text-slate-600">"${ev.feedback}"</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        },
+
+        renderDefenseSchedule() {
+          const scheduled = this.projects.filter(p => p.defenseSchedule);
+          return `
+            <div class="space-y-6">
+              <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+                <div>
+                  <h1 class="text-xl font-bold text-slate-900">جدول لجان المناقشة والحكم على المشاريع والأطروحات</h1>
+                  <div class="text-xs text-slate-500 mt-1">مواعيد الجلسات العلنية وتوزيع قاعات المناقشات وتشكيل اللجان</div>
+                </div>
+              </div>
+              <div class="space-y-4">
+                ${scheduled.map(p => {
+                  const def = p.defenseSchedule;
+                  return `
+                    <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm space-y-4">
+                      <div class="flex flex-col sm:flex-row justify-between gap-3">
+                        <div>
+                          <div class="text-xs text-teal-800 font-mono font-bold mb-1">${p.code} · ${p.department}</div>
+                          <h3 onclick="app.navigate('project_detail', '${p.id}')" class="text-base font-bold text-slate-900 hover:text-teal-800 cursor-pointer">${p.title}</h3>
+                          <div class="text-xs text-slate-600 mt-1">الطلاب: <strong>${p.students.map(s => s.name).join('، ')}</strong></div>
+                        </div>
+                        <div class="text-left shrink-0">
+                          <div class="text-xs font-bold text-teal-800 bg-teal-50 px-3 py-1.5 rounded border border-teal-200">${def.date} · ${def.time}</div>
+                          <div class="text-xs text-slate-500 mt-1">${def.hall}</div>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-slate-50 rounded border text-xs">
+                        <div><span class="text-slate-400 block">رئيس اللجنة (المشرف):</span><strong>${def.headOfCommittee}</strong></div>
+                        <div><span class="text-slate-400 block">الممتحن الداخلي:</span><strong>${def.internalExaminer}</strong></div>
+                        <div><span class="text-slate-400 block">الممتحن الخارجي:</span><strong>${def.externalExaminer}</strong></div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        },
+
+        renderReports() {
+          return `
+            <div class="space-y-6">
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-slate-200 pb-4">
+                <div>
+                  <h1 class="text-lg sm:text-xl font-bold text-slate-900">مركز التقارير والوثائق الأكاديمية الرسمية</h1>
+                  <div class="text-xs text-slate-500 mt-1">استخراج المحاضر الرسمية المعتمدة وتصدير قواعد البيانات</div>
+                </div>
+                <button onclick="localStorage.removeItem('${STORAGE_KEY}'); app.init(); app.notify('تمت استعادة البيانات الافتراضية');" class="self-start sm:self-auto px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 rounded-lg hover:text-red-700">
+                  استعادة البيانات الافتراضية
+                </button>
+              </div>
+
+              <!-- عرض البطاقات المخصص للجوال -->
+              <div class="md:hidden space-y-3">
+                ${this.projects.map(p => `
+                  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3 text-xs">
+                    <div class="flex items-center justify-between">
+                      <span class="font-mono font-bold text-teal-800">${p.code}</span>
+                      <span class="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">الإنجاز: ${p.progressPercentage}%</span>
+                    </div>
+                    <div class="font-bold text-slate-900 text-sm leading-snug">${p.title}</div>
+                    <div class="text-slate-600">المشرف: <strong>${p.supervisor.name}</strong></div>
+                    <button onclick="app.openOfficialReportModal('${p.id}')" class="w-full py-2.5 bg-teal-50 text-teal-800 border border-teal-200 rounded-lg font-bold active:scale-[0.99] transition-transform">
+                      معاينة وطباعة المحضر الرسمي
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+
+              <!-- عرض الجدول لسطح المكتب -->
+              <div class="hidden md:block bg-white border border-slate-200 rounded-lg overflow-x-auto shadow-sm">
+                <table class="w-full text-xs text-right divide-y divide-slate-200">
+                  <thead class="bg-slate-50 font-bold text-slate-700">
+                    <tr>
+                      <th class="px-4 py-3">رمز المشروع</th>
+                      <th class="px-4 py-3">عنوان المشروع</th>
+                      <th class="px-4 py-3">المشرف</th>
+                      <th class="px-4 py-3">الإنجاز</th>
+                      <th class="px-4 py-3 text-center">الوثيقة الرسمية</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${this.projects.map(p => `
+                      <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-mono font-bold text-teal-800">${p.code}</td>
+                        <td class="px-4 py-3 font-bold text-slate-900">${p.title}</td>
+                        <td class="px-4 py-3 text-slate-700">${p.supervisor.name}</td>
+                        <td class="px-4 py-3 font-mono font-bold">${p.progressPercentage}%</td>
+                        <td class="px-4 py-3 text-center">
+                          <button onclick="app.openOfficialReportModal('${p.id}')" class="px-3 py-1 bg-teal-50 text-teal-800 border border-teal-200 rounded font-bold hover:bg-teal-100">
+                            معاينة وطباعة المحضر
+                          </button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        },
+
+        closeModal() {
+          document.getElementById('modal-root').innerHTML = '';
+        },
+
+        openNewProjectModal() {
+          document.getElementById('modal-root').innerHTML = `
+            <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+              <div class="bg-white rounded-t-2xl sm:rounded-xl border border-slate-200 max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4 text-xs">
+                <div class="flex justify-between items-center border-b pb-3">
+                  <h3 class="text-base font-bold text-slate-900">تسجيل مقترح مشروع أكاديمي جديد</h3>
+                  <button onclick="app.closeModal()" class="p-1 text-slate-400 hover:text-slate-700 text-base">✕</button>
+                </div>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block font-bold mb-1">عنوان المشروع باللغة العربية:</label>
+                    <input id="np-title" type="text" class="w-full px-3 py-2.5 border rounded-lg text-sm" placeholder="مثال: منظومة ذكية لتشخيص الأمراض..." />
+                  </div>
+                  <div>
+                    <label class="block font-bold mb-1">القسم الأكاديمي:</label>
+                    <select id="np-dept" class="w-full px-3 py-2.5 border rounded-lg text-sm bg-white">
+                      ${DEPARTMENTS.slice(1).map(d => `<option value="${d}">${d}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block font-bold mb-1">المستخلص البحثي (Abstract):</label>
+                    <textarea id="np-abstract" rows="3" class="w-full px-3 py-2.5 border rounded-lg text-sm" placeholder="وصف المشكلة والأهداف والمنهجية..."></textarea>
+                  </div>
+                  <div>
+                    <label class="block font-bold mb-1">اسم الطالب الباحث الرئيسي:</label>
+                    <input id="np-student" type="text" value="عبدالله بن محمد السعيد" class="w-full px-3 py-2.5 border rounded-lg text-sm" />
+                  </div>
+                </div>
+                <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t">
+                  <button onclick="app.closeModal()" class="w-full sm:w-auto px-4 py-2.5 text-slate-600 border sm:border-0 rounded-lg font-medium">إلغاء</button>
+                  <button onclick="app.createNewProject()" class="w-full sm:w-auto px-5 py-2.5 bg-teal-800 text-white font-bold rounded-lg">إرسال المقترح للاعتماد</button>
+                </div>
+              </div>
+            </div>
+          `;
+        },
+
+        createNewProject() {
+          const title = document.getElementById('np-title').value.trim();
+          const dept = document.getElementById('np-dept').value;
+          const abstract = document.getElementById('np-abstract').value.trim();
+          const studentName = document.getElementById('np-student').value.trim() || 'طالب باحث';
+          if (!title) {
+            this.notify('يرجى إدخال عنوان المشروع الأكاديمي');
+            return;
+          }
+          const newProj = {
+            id: 'prj-' + Date.now(),
+            code: 'GP-2026-' + Math.floor(10 + Math.random() * 89),
+            title,
+            titleEn: 'Academic Research & Graduation Project',
+            department: dept,
+            academicYear: '2026 / 2027',
+            term: 'الفصل الدراسي الثاني',
+            category: 'graduation_2',
+            abstract: abstract || 'مشروع أكاديمي تطبيقي يهدف إلى تطوير حلول تقنية مبتكرة.',
+            objectives: ['تحليل المشكلة البحثية ومراجعة الدراسات الحديثة', 'بناء واختبار النموذج التطبيقي'],
+            methodology: 'منهجية البحث العلمي والتطوير المتتابع',
+            status: 'proposal_submitted',
+            progressPercentage: 15,
+            supervisor: FACULTY_MEMBERS[0],
+            students: [{ id: 'st-' + Date.now(), name: studentName, studentId: '441009988', role: 'قائد الفريق' }],
+            milestones: [
+              { id: 'm1-' + Date.now(), title: 'اعتماد وثيقة المقترح الأكاديمي', description: 'تحديد الأهداف ونطاق العمل.', dueDate: '2026-10-30', weightPercentage: 50, status: 'in_progress', deliverableRequired: true },
+              { id: 'm2-' + Date.now(), title: 'التنفيذ التجريبي والمناقشة النهائية', description: 'تسليم التقرير النهائي والعرض.', dueDate: '2027-02-20', weightPercentage: 50, status: 'upcoming', deliverableRequired: true }
+            ],
+            deliverables: [],
+            tasks: [],
+            supervisoryMeetings: [],
+            evaluations: [],
+            tags: ['مشروع جديد']
+          };
+          this.projects.unshift(newProj);
+          this.save();
+          this.closeModal();
+          this.navigate('project_detail', newProj.id);
+          this.notify('تم تسجيل مقترح المشروع الأكاديمي بنجاح');
+        },
+
+        submitDeliverablePrompt(projectId, milestoneId, msTitle) {
+          const p = this.projects.find(x => x.id === projectId);
+          if (!p) return;
+          p.deliverables.unshift({
+            id: 'del-' + Date.now(),
+            milestoneId,
+            title: 'تقرير: ' + msTitle,
+            submittedBy: p.students[0]?.name || 'الطالب الباحث',
+            submittedAt: new Date().toISOString().split('T')[0],
+            version: '1.0',
+            fileName: p.code + '_Report.pdf',
+            fileSize: '5.4 MB',
+            plagiarismSimilarity: 4.9,
+            status: 'pending_review',
+            feedback: []
+          });
+          this.save();
+          this.renderAll();
+          this.notify('تم إيداع التقرير وفحص الاستلال العلمي (4.9%) بنجاح');
+        },
+
+        approveDeliverable(projectId, delivId) {
+          const p = this.projects.find(x => x.id === projectId);
+          if (!p) return;
+          const d = p.deliverables.find(x => x.id === delivId);
+          if (d) {
+            d.status = 'approved';
+            d.grade = 95;
+            const ms = p.milestones.find(m => m.id === d.milestoneId);
+            if (ms) ms.status = 'completed';
+            p.progressPercentage = Math.min(100, p.progressPercentage + 15);
+          }
+          this.save();
+          this.renderAll();
+          this.notify('تم اعتماد المخرج الأكاديمي ورصد الدرجة بنجاح');
+        },
+
+        addTaskPrompt(projectId) {
+          const p = this.projects.find(x => x.id === projectId);
+          if (!p) return;
+          p.tasks.unshift({
+            id: 'tsk-' + Date.now(),
+            title: 'مراجعة وتدقيق نتائج التجارب المعملية',
+            description: 'توثيق الجداول والمقارنات المرجعية في الفصل الرابع',
+            assignedTo: p.students[0]?.name || 'الباحث',
+            status: 'todo',
+            priority: 'high',
+            dueDate: '2027-02-18'
+          });
+          this.save();
+          this.renderAll();
+          this.notify('تمت إضافة مهمة بحثية جديدة إلى اللوحة');
+        },
+
+        advanceTask(projectId, taskId) {
+          const p = this.projects.find(x => x.id === projectId);
+          if (!p) return;
+          const t = p.tasks.find(x => x.id === taskId);
+          if (t) {
+            t.status = t.status === 'todo' ? 'in_progress' : 'done';
+          }
+          this.save();
+          this.renderAll();
+          this.notify('تم تحديث حالة المهمة بنجاح');
+        },
+
+        addMeetingPrompt(projectId) {
+          const p = this.projects.find(x => x.id === projectId);
+          if (!p) return;
+          p.supervisoryMeetings.unshift({
+            id: 'meet-' + Date.now(),
+            date: new Date().toISOString().split('T')[0],
+            time: '11:30 ص',
+            location: 'مكتب المشرف الأكاديمي',
+            agenda: 'متابعة تقدم التجارب العلمية ومراجعة مسودة الفصول',
+            outcomes: 'تمت المصادقة على منهجية الاختبار والتوجيه باستكمال فصل المناقشة.',
+            actionItems: ['استكمال الرسوم البيانية'],
+            nextMeetingDate: '2027-02-22',
+            supervisorSignature: true,
+            attendedStudents: p.students.map(s => s.name)
+          });
+          this.save();
+          this.renderAll();
+          this.notify('تم توثيق محضر الجلسة الإرشادية ومصادقته رقمياً');
+        },
+
+        saveEvaluation(projectId) {
+          const p = this.projects.find(x => x.id === projectId);
+          if (!p) return;
+          const c1 = Number(document.getElementById('ev-c1')?.value || 14);
+          const c2 = Number(document.getElementById('ev-c2')?.value || 19);
+          const c3 = Number(document.getElementById('ev-c3')?.value || 34);
+          const c4 = Number(document.getElementById('ev-c4')?.value || 14);
+          const c5 = Number(document.getElementById('ev-c5')?.value || 15);
+          const notes = document.getElementById('ev-notes')?.value || '';
+          const total = Math.min(100, c1 + c2 + c3 + c4 + c5);
+          p.evaluations.unshift({
+            id: 'ev-' + Date.now(),
+            evaluatorName: this.currentRole === 'supervisor' ? p.supervisor.name : 'د. حسام الشريف (رئيس اللجنة)',
+            evaluatorRole: this.currentRole,
+            totalScore: total,
+            feedback: notes,
+            submittedAt: new Date().toISOString().split('T')[0]
+          });
+          this.save();
+          this.renderAll();
+          this.notify('تم حفظ واعتماد استمارة التقييم الموزون (' + total + '/100)');
+        },
+
+        openOfficialReportModal(projectId) {
+          const p = this.projects.find(x => x.id === projectId) || this.projects[0];
+          const avgEval = p.evaluations.length > 0 ? p.evaluations[0].totalScore : 96;
+          document.getElementById('modal-root').innerHTML = `
+            <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+              <div class="bg-white rounded-t-2xl sm:rounded-xl border border-slate-200 max-w-3xl w-full max-h-[92vh] overflow-y-auto p-4 sm:p-8 shadow-2xl my-0 sm:my-8 space-y-5 text-slate-900">
+                <div class="no-print flex items-center justify-between border-b pb-3 gap-2">
+                  <span class="text-xs text-slate-500 font-bold">معاينة وثيقة الاعتماد الرسمية</span>
+                  <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="px-3.5 py-2 text-xs font-bold text-white bg-teal-800 rounded-lg">طباعة المستند</button>
+                    <button onclick="app.closeModal()" class="p-1.5 text-slate-500 text-base">✕</button>
+                  </div>
+                </div>
+                <div class="space-y-4 border border-slate-300 p-4 sm:p-6 rounded-lg text-xs">
+                  <div class="flex flex-col sm:flex-row sm:justify-between gap-2 border-b-2 border-slate-800 pb-4">
+                    <div>
+                      <div class="font-bold text-sm">المملكة العربية السعودية</div>
+                      <div class="font-bold">كلية علوم الحاسب والمعلومات</div>
+                      <div>لجنة مشاريع التخرج والدراسات العليا</div>
+                    </div>
+                    <div class="sm:text-left font-mono">
+                      <div>الرقم المرجعي: <strong>${p.code}</strong></div>
+                      <div>العام الجامعي: <strong>${p.academicYear}</strong></div>
+                    </div>
+                  </div>
+                  <div class="text-center py-1">
+                    <h2 class="text-sm sm:text-base font-bold">محضر اعتماد وتحكيم مشروع التخرج النهائي</h2>
+                  </div>
+                  <div class="p-3 bg-slate-50 border rounded space-y-1.5 leading-relaxed">
+                    <div><strong>عنوان المشروع:</strong> ${p.title}</div>
+                    <div><strong>القسم الأكاديمي:</strong> ${p.department} · <strong>المشرف:</strong> ${p.supervisor.name}</div>
+                    <div><strong>الطلاب الباحثون:</strong> ${p.students.map(s => s.name + ' (' + s.studentId + ')').join('، ')}</div>
+                  </div>
+                  <div class="p-3 bg-teal-50 border border-teal-200 rounded flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 font-bold">
+                    <span>الدرجة النهائية المعتمدة والتقدير العام:</span>
+                    <span class="font-mono text-sm text-teal-900">${avgEval} / 100 — ممتاز مرتفع (A+)</span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 text-center border-t">
+                    <div class="p-2 bg-slate-50 sm:bg-transparent rounded"><strong>المشرف الأكاديمي</strong><div class="text-teal-800 mt-1">✓ موقع رقمياً</div></div>
+                    <div class="p-2 bg-slate-50 sm:bg-transparent rounded"><strong>رئيس لجنة التحكيم</strong><div class="text-teal-800 mt-1">✓ موقع رقمياً</div></div>
+                    <div class="p-2 bg-slate-50 sm:bg-transparent rounded"><strong>خاتم عمادة الكلية</strong><div class="text-slate-400 mt-1">معتمد رسمياً</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      };
+
+      window.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
   </body>
 </html>
-
